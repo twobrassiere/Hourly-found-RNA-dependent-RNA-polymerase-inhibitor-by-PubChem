@@ -1,0 +1,40 @@
+name: Hourly ChEMBL Sync
+
+on:
+  schedule:
+    # 每小時第 0 分鐘自動執行一次 (UTC 時間)
+    - cron: '0 * * * *'
+  push:
+    branches:
+      - main
+  workflow_dispatch: # 支援在 GitHub 網頁手動觸發
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 檢出程式碼 (設定 fetch-depth: 0 確保版本歷史完整)
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 設定 Python 環境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 3. 安裝所需的 Python 套件
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas chembl_webresource_client gspread google-auth
+
+      # 4. 執行 Python 資料同步腳本
+      - name: Run Python Sync Script
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: python chembl_sync_script.py
