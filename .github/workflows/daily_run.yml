@@ -40,46 +40,4 @@ jobs:
           TARGET_ORGANISM: ${{ github.event.inputs.target_organism }}
         run: python pubchem.py
 
-      # 5. 執行成功後發送成功 Notification Email
-      - name: Send Success Email
-        if: success()
-        uses: dawidd6/action-send-mail@v5
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "✅ [GitHub Actions] PubChem RdRp 分析與同步成功完成"
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          from: "GitHub Actions Automation <${{ secrets.GMAIL_USERNAME }}>"
-          priority: normal
-          body: |
-            PubChem 數據庫 RdRp 抑制劑化合物自動化分析與同步作業已順利完成！
-            
-            - 觸發事件: ${{ github.event_name }}
-            - 指定病毒株: ${{ github.event.inputs.target_organism || '自動輪播模式' }}
-            - 執行時間 (UTC): ${{ github.event.head_commit.timestamp || '手動排程觸發' }}
-            - 觀看 Google 試算表更新狀況: https://docs.google.com/spreadsheets/d/${{ secrets.SPREADSHEET_ID }}
-            - 檢視 GitHub Actions Log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      # 6. 若執行失敗發送失敗 Notification Email
-      - name: Send Failure Email
-        if: failure()
-        uses: dawidd6/action-send-mail@v5
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "❌ [GitHub Actions] PubChem RdRp 分析與同步執行失敗"
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          from: "GitHub Actions Automation <${{ secrets.GMAIL_USERNAME }}>"
-          priority: high
-          body: |
-            PubChem 自動化分析排程執行時發生錯誤，請檢查 Log：
-            
-            - 儲存庫: ${{ github.repository }}
-            - 觸發事件: ${{ github.event_name }}
-            - 錯誤 Log 連結: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+     
