@@ -5,11 +5,7 @@ on:
     # 每小時第 0 分鐘自動觸發執行一次 (UTC 時間)
     - cron: '0 * * * *'
   workflow_dispatch: # 支援在 GitHub 網頁上點擊手動觸發
-    inputs:
-      target_organism:
-        description: '手動指定要執行的病毒名稱 (若留空則依時間自動輪播)'
-        required: false
-        default: ''
+  
 
 jobs:
   build-and-run:
@@ -37,7 +33,6 @@ jobs:
         env:
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-          TARGET_ORGANISM: ${{ github.event.inputs.target_organism }}
         run: python pubchem.py
 
      
