@@ -1,40 +1,77 @@
-name: Hourly ChEMBL Sync
+name: Hourly NCBI & ChEMBL Sync with Email Notification
 
 on:
-  schedule:
-    # 每小時第 0 分鐘自動執行一次 (UTC 時間)
-    - cron: '0 * * * *'
-  push:
-    branches:
-      - main
-  workflow_dispatch: # 支援在 GitHub 網頁手動觸發
+  #schedule:
+    # 每小時第 0 分鐘自動觸發執行一次 (UTC 時間)
+  #  - cron: '0 * * * *'
+  #workflow_dispatch: # 支援在 GitHub 網頁上點擊手動觸發
 
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 檢出程式碼 (設定 fetch-depth: 0 確保版本歷史完整)
+      # 1. 檢出程式碼
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. 設定 Python 環境
+      # 2. 設定 Python 3.10 環境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3. 安裝所需的 Python 套件
+      # 3. 安裝必要 Python 套件
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas chembl_webresource_client gspread google-auth
+          pip install pandas  gspread google-auth requests
 
-      # 4. 執行 Python 資料同步腳本
-      - name: Run Python Sync Script
+      # 4. 帶入 Secrets 並執行抓取腳本
+      - name: Run Fetch Script
         env:
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: python chembl_sync_script.py
+
+      # 5. 執行成功後發送成功 Notification Email
+      - name: Send Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "✅ [GitHub Actions] ChEMBL & NCBI Sync 成功完成"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: "GitHub Actions Automation <${{ secrets.GMAIL_USERNAME }}>"
+          body: |
+            NCBI Gene 與 ChEMBL RNA 病毒複製抑制劑同步作業已順利執行完成！
+            
+            - 觸發事件: ${{ github.event_name }}
+            - 執行時間 (UTC): ${{ github.event.head_commit.timestamp }}
+            - 觀看 Google 試算表更新狀況: https://docs.google.com/spreadsheets/d/${{ secrets.SPREADSHEET_ID }}
+            - 檢視 GitHub Actions Log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # 6. 若執行失敗發送失敗 Notification Email
+      - name: Send Failure Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "❌ [GitHub Actions] ChEMBL & NCBI Sync 執行失敗"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: "GitHub Actions Automation <${{ secrets.GMAIL_USERNAME }}>"
+          body: |
+            排程執行時發生錯誤，請檢查 Log：
+            
+            - 儲存庫: ${{ github.repository }}
+            - 錯誤 Log 連結: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
