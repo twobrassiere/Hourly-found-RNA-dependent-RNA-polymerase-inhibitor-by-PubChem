@@ -1,10 +1,15 @@
-name: Hourly NCBI & ChEMBL Sync with Email Notification
+name: Hourly PubChem RdRp Analysis & Sync with Email Notification
 
 on:
-  #schedule:
+  schedule:
     # 每小時第 0 分鐘自動觸發執行一次 (UTC 時間)
-  #  - cron: '0 * * * *'
-  #workflow_dispatch: # 支援在 GitHub 網頁上點擊手動觸發
+    - cron: '0 * * * *'
+  workflow_dispatch: # 支援在 GitHub 網頁上點擊手動觸發
+    inputs:
+      target_organism:
+        description: '手動指定要執行的病毒名稱 (若留空則依時間自動輪播)'
+        required: false
+        default: ''
 
 jobs:
   build-and-run:
@@ -14,64 +19,68 @@ jobs:
       # 1. 檢出程式碼
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # 2. 設定 Python 3.10 環境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip' # 開啟 pip 快取以加速執行速度
 
       # 3. 安裝必要 Python 套件
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas pubchempy  gspread google-auth requests
+          pip install pandas pubchempy gspread google-auth requests
 
-      # 4. 帶入 Secrets 並執行抓取腳本
-      - name: Run Fetch Script
+      # 4. 帶入 Secrets 並執行 PubChem 分析與同步腳本
+      - name: Run PubChem Analysis Script
         env:
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          TARGET_ORGANISM: ${{ github.event.inputs.target_organism }}
         run: python pubchem.py
 
       # 5. 執行成功後發送成功 Notification Email
       - name: Send Success Email
         if: success()
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "✅ [GitHub Actions] ChEMBL & NCBI Sync 成功完成"
+          subject: "✅ [GitHub Actions] PubChem RdRp 分析與同步成功完成"
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: "GitHub Actions Automation <${{ secrets.GMAIL_USERNAME }}>"
+          priority: normal
           body: |
-            NCBI Gene 與 ChEMBL RNA 病毒複製抑制劑同步作業已順利執行完成！
+            PubChem 數據庫 RdRp 抑制劑化合物自動化分析與同步作業已順利完成！
             
             - 觸發事件: ${{ github.event_name }}
-            - 執行時間 (UTC): ${{ github.event.head_commit.timestamp }}
+            - 指定病毒株: ${{ github.event.inputs.target_organism || '自動輪播模式' }}
+            - 執行時間 (UTC): ${{ github.event.head_commit.timestamp || '手動排程觸發' }}
             - 觀看 Google 試算表更新狀況: https://docs.google.com/spreadsheets/d/${{ secrets.SPREADSHEET_ID }}
             - 檢視 GitHub Actions Log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # 6. 若執行失敗發送失敗 Notification Email
       - name: Send Failure Email
         if: failure()
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "❌ [GitHub Actions] ChEMBL & NCBI Sync 執行失敗"
+          subject: "❌ [GitHub Actions] PubChem RdRp 分析與同步執行失敗"
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: "GitHub Actions Automation <${{ secrets.GMAIL_USERNAME }}>"
+          priority: high
           body: |
-            排程執行時發生錯誤，請檢查 Log：
+            PubChem 自動化分析排程執行時發生錯誤，請檢查 Log：
             
             - 儲存庫: ${{ github.repository }}
+            - 觸發事件: ${{ github.event_name }}
             - 錯誤 Log 連結: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
