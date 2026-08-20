@@ -43,7 +43,7 @@ jobs:
       # 5. 執行成功後發送成功 Notification Email
       - name: Send Success Email
         if: success()
-        uses: dawidd6/action-send-mail@v4
+        uses: dawidd6/action-send-mail@v5
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -66,7 +66,7 @@ jobs:
       # 6. 若執行失敗發送失敗 Notification Email
       - name: Send Failure Email
         if: failure()
-        uses: dawidd6/action-send-mail@v4
+        uses: dawidd6/action-send-mail@v5
         with:
           server_address: smtp.gmail.com
           server_port: 465
