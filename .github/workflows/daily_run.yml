@@ -27,14 +27,14 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas  gspread google-auth requests
+          pip install pandas pubchempy  gspread google-auth requests
 
       # 4. 帶入 Secrets 並執行抓取腳本
       - name: Run Fetch Script
         env:
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-        run: python chembl_sync_script.py
+        run: python pubchem.py
 
       # 5. 執行成功後發送成功 Notification Email
       - name: Send Success Email
